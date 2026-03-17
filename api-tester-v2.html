@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AxeSMS — Complete API Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090e;--s1:#0c0f17;--s2:#11151f;--s3:#181d2a;
+  --b:#1e2535;--b2:#252d40;
+  --acc:#00e5ff;--acc2:#00ff88;--acc3:#ff6b35;
+  --acd:rgba(0,229,255,.1);--ag:rgba(0,255,136,.1);
+  --txt:#dce8f5;--mut:#5a6a85;--red:#ff3d57;--yel:#ffc107;
+  --mono:'IBM Plex Mono',monospace;--sans:'Barlow',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(0,229,255,.04) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 40% at 80% 100%,rgba(0,255,136,.04) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+
+/* TOP BAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,9,14,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--b);
+  display:flex;align-items:center;gap:16px;padding:0 20px;height:52px;
+}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;white-space:nowrap}
+.logo-dot{width:10px;height:10px;background:var(--acc2);border-radius:50%;box-shadow:0 0 10px var(--acc2);animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.conn-pill{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--b);color:var(--mut);cursor:pointer;transition:.2s}
+.conn-pill.ok{border-color:var(--acc2);color:var(--acc2);background:var(--ag)}
+.conn-pill.err{border-color:var(--red);color:var(--red)}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;min-width:220px;
+  border-right:1px solid var(--b);
+  overflow-y:auto;padding:12px 8px;
+  display:flex;flex-direction:column;gap:2px;
+  background:var(--s1);
+}
+.sidebar-section{font-family:var(--mono);font-size:9px;color:var(--mut);letter-spacing:1.5px;text-transform:uppercase;padding:10px 8px 4px}
+.nav-item{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border-radius:6px;cursor:pointer;font-size:13px;color:var(--mut);
+  border:1px solid transparent;transition:.15s;user-select:none;
+}
+.nav-item:hover{background:var(--s2);color:var(--txt)}
+.nav-item.active{background:var(--acd);border-color:rgba(0,229,255,.2);color:var(--acc)}
+.badge{font-family:var(--mono);font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
+.badge.get{background:rgba(0,229,255,.12);color:var(--acc)}
+.badge.post{background:rgba(0,255,136,.12);color:var(--acc2)}
+.badge.del{background:rgba(255,61,87,.12);color:var(--red)}
+.badge.adm{background:rgba(255,107,53,.12);color:var(--acc3)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+
+/* CONFIG BAR */
+.cfg-bar{
+  background:var(--s1);border:1px solid var(--b);border-radius:10px;
+  padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+}
+.cfg-bar label{font-family:var(--mono);font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+.cfg-bar input{
+  flex:1;min-width:180px;background:var(--s2);border:1px solid var(--b);
+  border-radius:6px;padding:7px 10px;color:var(--txt);font-family:var(--mono);
+  font-size:12px;outline:none;transition:.2s;
+}
+.cfg-bar input:focus{border-color:var(--acc)}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--b);border-radius:10px;overflow:hidden}
+.card-head{
+  background:var(--s2);border-bottom:1px solid var(--b);
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.card-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ep{font-family:var(--mono);font-size:11px;color:var(--mut);background:var(--bg);padding:3px 8px;border-radius:4px;border:1px solid var(--b)}
+.card-body{padding:16px}
+
+/* FORM */
+.fg{display:grid;gap:10px}
+.fg.c2{grid-template-columns:1fr 1fr}
+.fg.c3{grid-template-columns:1fr 1fr 1fr}
+.full{grid-column:1/-1}
+.fl{display:flex;flex-direction:column;gap:5px}
+.fl label{font-family:var(--mono);font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px}
+.fl input,.fl textarea,.fl select{
+  background:var(--s2);border:1px solid var(--b);border-radius:6px;
+  padding:8px 10px;color:var(--txt);font-family:var(--mono);font-size:12px;
+  outline:none;transition:.2s;resize:vertical;
+}
+.fl input:focus,.fl textarea:focus,.fl select:focus{border-color:var(--acc)}
+.fl select option{background:var(--s2)}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 18px;
+  border-radius:7px;border:none;cursor:pointer;font-family:var(--sans);
+  font-size:13px;font-weight:600;transition:.15s;
+}
+.btn-primary{background:var(--acc);color:#000}
+.btn-primary:hover{background:#00cfed;transform:translateY(-1px)}
+.btn-green{background:var(--acc2);color:#000}
+.btn-green:hover{background:#00e07a}
+.btn-ghost{background:var(--s2);color:var(--txt);border:1px solid var(--b)}
+.btn-ghost:hover{border-color:var(--acc);color:var(--acc)}
+.btn-red{background:rgba(255,61,87,.12);color:var(--red);border:1px solid rgba(255,61,87,.2)}
+.btn-red:hover{background:rgba(255,61,87,.2)}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* RESPONSE */
+.res-card{background:var(--s1);border:1px solid var(--b);border-radius:10px;overflow:hidden}
+.res-head{
+  background:var(--s2);border-bottom:1px solid var(--b);padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.res-status{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:4px;font-weight:700}
+.s-ok{background:rgba(0,255,136,.12);color:var(--acc2)}
+.s-err{background:rgba(255,61,87,.12);color:var(--red)}
+#res-body{
+  padding:16px;font-family:var(--mono);font-size:12px;color:#8899b5;
+  white-space:pre-wrap;min-height:180px;max-height:420px;overflow-y:auto;line-height:1.7;
+}
+.jk{color:#ffaa55}.js{color:#a5d6ff}.jn{color:#79c0ff}.jb{color:var(--acc2)}.jl{color:var(--mut)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.stat-box{
+  background:var(--s2);border:1px solid var(--b);border-radius:8px;
+  padding:12px;text-align:center;
+}
+.stat-val{font-size:24px;font-weight:800;color:var(--acc)}
+.stat-lbl{font-size:11px;color:var(--mut);margin-top:2px}
+
+/* DEVICE CARDS */
+.dev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
+.dev-card{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:12px}
+.dev-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot-on{background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
+.dot-off{background:var(--mut)}
+.dot-busy{background:var(--yel);box-shadow:0 0 6px var(--yel)}
+
+/* SPINNER */
+.spin{width:14px;height:14px;border:2px solid rgba(0,229,255,.15);border-top-color:var(--acc);border-radius:50%;animation:sp .5s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* TABS */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--b);background:var(--s2);padding:0 16px}
+.tab{padding:10px 14px;font-size:12px;font-family:var(--mono);cursor:pointer;color:var(--mut);border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--txt)}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.tab-pane{display:none;padding:16px}.tab-pane.on{display:block}
+
+.note{font-size:12px;color:var(--mut);padding:8px 12px;background:var(--s3);border-radius:6px;border-left:3px solid var(--acc);margin-bottom:12px}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .cfg-bar{flex-direction:column}
+  .fg.c2,.fg.c3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-dot"></span>
+    Axe<span style="color:var(--acc)">SMS</span>
+    <span style="font-size:11px;color:var(--mut);font-family:var(--mono)">API v2</span>
+  </div>
+  <button class="conn-pill" id="conn-pill" onclick="testConn()">⬤ Not connected</button>
+  <div class="topbar-right">
+    <button class="btn btn-ghost btn-sm" onclick="copyRes()">Copy Response</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearRes()">Clear</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">Configuration</div>
+    <div class="nav-item active" onclick="show('cfg')">⚙ Setup & Config</div>
+
+    <div class="sidebar-section">Public API</div>
+    <div class="nav-item" onclick="show('send-single')"><span class="badge post">POST</span> Send SMS</div>
+    <div class="nav-item" onclick="show('send-bulk')"><span class="badge post">POST</span> Bulk SMS</div>
+    <div class="nav-item" onclick="show('sms-status')"><span class="badge get">GET</span> SMS Status</div>
+    <div class="nav-item" onclick="show('sms-logs')"><span class="badge get">GET</span> SMS Logs</div>
+    <div class="nav-item" onclick="show('sms-search')"><span class="badge get">GET</span> Search SMS</div>
+    <div class="nav-item" onclick="show('devices')"><span class="badge get">GET</span> Devices</div>
+    <div class="nav-item" onclick="show('incoming')"><span class="badge get">GET</span> Incoming SMS</div>
+    <div class="nav-item" onclick="show('balance')"><span class="badge get">GET</span> Balance</div>
+
+    <div class="sidebar-section">APK Bridge</div>
+    <div class="nav-item" onclick="show('apk-hb')"><span class="badge post">POST</span> Heartbeat</div>
+    <div class="nav-item" onclick="show('apk-queue')"><span class="badge get">GET</span> Get Queue</div>
+    <div class="nav-item" onclick="show('apk-delivery')"><span class="badge post">POST</span> Delivery Report</div>
+    <div class="nav-item" onclick="show('apk-incoming')"><span class="badge post">POST</span> Incoming SMS</div>
+
+    <div class="sidebar-section">Admin</div>
+    <div class="nav-item" onclick="show('admin-stats')"><span class="badge adm">GET</span> Stats</div>
+    <div class="nav-item" onclick="show('admin-keys')"><span class="badge adm">KEYS</span> API Keys</div>
+    <div class="nav-item" onclick="show('admin-devices')"><span class="badge adm">DEV</span> Manage Devices</div>
+  </div>
+
+  <div class="main">
+
+    <!-- CONFIG BAR (always visible) -->
+    <div class="cfg-bar">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>Supabase URL</label>
+        <input id="in-url" placeholder="https://xxx.supabase.co/functions/v1/axesms-api" style="min-width:320px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>API Key</label>
+        <input id="in-key" placeholder="axe_xxxxxxxx" style="min-width:200px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>Admin Secret</label>
+        <input id="in-admin" type="password" placeholder="admin secret" style="min-width:140px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label>APK Secret</label>
+        <input id="in-apk" type="password" placeholder="apk bridge secret" style="min-width:140px"/>
+      </div>
+    </div>
+
+    <!-- SECTIONS -->
+
+    <!-- SETUP -->
+    <div id="sec-cfg" class="card">
+      <div class="card-head"><div class="card-title">⚙ Setup Guide</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <p style="font-weight:700;margin-bottom:8px;color:var(--acc)">Step 1 — Supabase DB</p>
+            <p style="font-size:13px;color:var(--mut);line-height:1.7">Run <code style="color:var(--acc2)">schema_v2.sql</code> in Supabase SQL Editor. This creates all tables matching the APK's data model.</p>
+          </div>
+          <div>
+            <p style="font-weight:700;margin-bottom:8px;color:var(--acc)">Step 2 — Edge Function</p>
+            <pre style="font-size:11px;color:var(--mut);background:var(--s2);padding:10px;border-radius:6px;overflow-x:auto">supabase functions new axesms-api
+# paste edge-functions-v2.js content
+supabase functions deploy axesms-api</pre>
+          </div>
+          <div>
+            <p style="font-weight:700;margin-bottom:8px;color:var(--acc)">Step 3 — Env Variables</p>
+            <pre style="font-size:11px;color:var(--mut);background:var(--s2);padding:10px;border-radius:6px">SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_KEY=your_service_role_key
+APK_BRIDGE_SECRET=your_secret_here
+ADMIN_SECRET=your_admin_secret</pre>
+          </div>
+          <div>
+            <p style="font-weight:700;margin-bottom:8px;color:var(--acc)">Step 4 — Firebase Bridge</p>
+            <pre style="font-size:11px;color:var(--mut);background:var(--s2);padding:10px;border-radius:6px;overflow-x:auto">npm i firebase-admin @supabase/supabase-js dotenv
+node firebase-bridge.js</pre>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <p style="font-weight:700;margin-bottom:8px;color:var(--acc2)">APK Integration — How it works</p>
+          <p style="font-size:13px;color:var(--mut);line-height:1.8">
+            The APK (<code style="color:var(--txt)">com.rooted.panel</code>) uses <b>Firebase Firestore</b> for realtime sync and a <b>MySQL/HTTP backend</b> for API calls. It syncs the server base URL via <code style="color:var(--acc)">panel/config</code> from Firestore. Your APK should call <code style="color:var(--acc2)">/apk/heartbeat</code> every 30s, <code style="color:var(--acc2)">/apk/queue</code> to get pending SMS, and <code style="color:var(--acc2)">/apk/delivery</code> + <code style="color:var(--acc2)">/apk/incoming</code> to report results. The Firebase Bridge handles the realtime sync automatically.
+          </p>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="testConn()">▶ Test Connection</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEND SINGLE -->
+    <div id="sec-send-single" class="card" style="display:none">
+      <div class="card-head">
+        <div class="card-title"><span class="badge post">POST</span> Send Single SMS</div>
+        <code class="ep">/sms/send</code>
+      </div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl"><label>To Number *</label><input id="s-to" placeholder="+919876543210"/></div>
+          <div class="fl"><label>SIM Slot</label>
+            <select id="s-sim"><option value="1">SIM 1</option><option value="2">SIM 2</option></select>
+          </div>
+          <div class="fl"><label>Device ID (optional)</label><input id="s-dev" placeholder="device_1 — blank = auto assign"/></div>
+          <div class="fl"><label>Campaign Name</label><input id="s-camp" placeholder="Optional"/></div>
+          <div class="fl full"><label>Message *</label><textarea id="s-msg" rows="3" placeholder="Your message..."></textarea></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <button class="btn btn-green" onclick="doSendSingle()">▶ Send SMS</button>
+          <span id="s-chars" style="font-size:11px;font-family:var(--mono);color:var(--mut)">0 / 160</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEND BULK -->
+    <div id="sec-send-bulk" class="card" style="display:none">
+      <div class="card-head">
+        <div class="card-title"><span class="badge post">POST</span> Bulk SMS</div>
+        <code class="ep">/sms/bulk</code>
+      </div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl full"><label>Recipients * (one number per line)</label>
+            <textarea id="b-nums" rows="6" placeholder="+919876543210&#10;+919876543211&#10;+919876543212" oninput="updateBulkCount()"></textarea>
+          </div>
+          <div class="fl full"><label>Message *</label><textarea id="b-msg" rows="3" placeholder="Your bulk message..."></textarea></div>
+          <div class="fl"><label>Campaign Name</label><input id="b-camp" placeholder="Campaign 2025"/></div>
+          <div class="fl"><label>Device ID</label><input id="b-dev" placeholder="blank = round-robin"/></div>
+          <div class="fl"><label>SIM Slot</label>
+            <select id="b-sim"><option value="1">SIM 1</option><option value="2">SIM 2</option><option value="">Auto</option></select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+          <button class="btn btn-green" onclick="doSendBulk()">▶ Send Bulk</button>
+          <span id="b-count" style="font-size:12px;font-family:var(--mono);color:var(--mut)">0 numbers</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SMS STATUS -->
+    <div id="sec-sms-status" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> SMS Status</div><code class="ep">/sms/status</code></div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl full"><label>SMS ID *</label><input id="st-id" placeholder="Paste SMS UUID"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="doStatus()" style="margin-top:4px">▶ Check Status</button>
+      </div>
+    </div>
+
+    <!-- SMS LOGS -->
+    <div id="sec-sms-logs" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> SMS Logs</div><code class="ep">/data/sms/list</code></div>
+      <div class="card-body">
+        <div class="fg c3">
+          <div class="fl"><label>Status</label>
+            <select id="l-status"><option value="">All</option><option>pending</option><option>queued</option><option>processing</option><option>sent</option><option>delivered</option><option>failed</option></select>
+          </div>
+          <div class="fl"><label>Limit</label><input id="l-limit" type="number" value="20" min="1" max="200"/></div>
+          <div class="fl"><label>Page</label><input id="l-page" type="number" value="1" min="1"/></div>
+          <div class="fl"><label>Campaign</label><input id="l-camp" placeholder="Filter by campaign"/></div>
+          <div class="fl"><label>Device</label><input id="l-dev" placeholder="device_1"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="doLogs()" style="margin-top:8px">▶ Fetch Logs</button>
+      </div>
+    </div>
+
+    <!-- SMS SEARCH -->
+    <div id="sec-sms-search" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> Search SMS</div><code class="ep">/data/sms/search</code></div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl full"><label>Search Query *</label><input id="sch-q" placeholder="Phone number, message text, or campaign..."/></div>
+          <div class="fl"><label>Limit</label><input id="sch-l" type="number" value="20"/></div>
+          <div class="fl"><label>Page</label><input id="sch-p" type="number" value="1"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="doSearch()" style="margin-top:8px">▶ Search</button>
+      </div>
+    </div>
+
+    <!-- DEVICES -->
+    <div id="sec-devices" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> Devices</div><code class="ep">/devices/list</code></div>
+      <div class="card-body">
+        <button class="btn btn-primary" onclick="doDevices()">▶ Fetch Devices</button>
+        <div id="dev-cards" class="dev-grid"></div>
+      </div>
+    </div>
+
+    <!-- INCOMING -->
+    <div id="sec-incoming" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> Incoming SMS</div><code class="ep">/incoming</code></div>
+      <div class="card-body">
+        <div class="fg c3">
+          <div class="fl"><label>Limit</label><input id="i-l" type="number" value="20"/></div>
+          <div class="fl"><label>Page</label><input id="i-p" type="number" value="1"/></div>
+          <div class="fl"><label>From Number</label><input id="i-from" placeholder="Filter by sender"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="doIncoming()" style="margin-top:8px">▶ Fetch Incoming</button>
+      </div>
+    </div>
+
+    <!-- BALANCE -->
+    <div id="sec-balance" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> Balance</div><code class="ep">/balance</code></div>
+      <div class="card-body"><button class="btn btn-primary" onclick="doBalance()">▶ Check Balance</button></div>
+    </div>
+
+    <!-- APK HEARTBEAT -->
+    <div id="sec-apk-hb" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge post">POST</span> APK Heartbeat</div><code class="ep">/apk/heartbeat</code></div>
+      <div class="card-body">
+        <div class="note">APK sends this every 30s. Uses APK Secret (not API key). Also returns pending SMS queue for the device.</div>
+        <div class="fg c2">
+          <div class="fl"><label>Device ID *</label><input id="hb-dev" placeholder="device_1"/></div>
+          <div class="fl"><label>Public IP</label><input id="hb-ip" placeholder="1.2.3.4 (optional)"/></div>
+          <div class="fl"><label>Model</label><input id="hb-model" placeholder="Xiaomi Redmi 9 (optional)"/></div>
+          <div class="fl"><label>Battery %</label><input id="hb-bat" type="number" placeholder="85"/></div>
+        </div>
+        <button class="btn btn-green" onclick="doHeartbeat()" style="margin-top:8px">▶ Send Heartbeat</button>
+      </div>
+    </div>
+
+    <!-- APK QUEUE -->
+    <div id="sec-apk-queue" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge get">GET</span> Get Queue (APK Polls)</div><code class="ep">/apk/queue</code></div>
+      <div class="card-body">
+        <div class="note">APK calls this to get pending SMS. Marks them as "processing" automatically.</div>
+        <div class="fg c2">
+          <div class="fl"><label>Device ID *</label><input id="q-dev" placeholder="device_1"/></div>
+          <div class="fl"><label>Limit</label><input id="q-lim" type="number" value="20"/></div>
+        </div>
+        <button class="btn btn-green" onclick="doQueue()" style="margin-top:8px">▶ Get Queue</button>
+      </div>
+    </div>
+
+    <!-- APK DELIVERY -->
+    <div id="sec-apk-delivery" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge post">POST</span> Delivery Report (APK)</div><code class="ep">/apk/delivery</code></div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl"><label>SMS ID (UUID) *</label><input id="dr-id" placeholder="From queue response"/></div>
+          <div class="fl"><label>Device ID *</label><input id="dr-dev" placeholder="device_1"/></div>
+          <div class="fl"><label>Status *</label>
+            <select id="dr-stat"><option value="sent">sent</option><option value="delivered">delivered</option><option value="failed">failed</option></select>
+          </div>
+          <div class="fl"><label>APK Message ID</label><input id="dr-apkid" placeholder="APK's own msg ID"/></div>
+          <div class="fl"><label>SIM Slot</label>
+            <select id="dr-sim"><option value="1">SIM 1</option><option value="2">SIM 2</option></select>
+          </div>
+          <div class="fl"><label>Error (if failed)</label><input id="dr-err" placeholder="Error message"/></div>
+        </div>
+        <button class="btn btn-green" onclick="doDelivery()" style="margin-top:8px">▶ Send Report</button>
+      </div>
+    </div>
+
+    <!-- APK INCOMING -->
+    <div id="sec-apk-incoming" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge post">POST</span> Incoming SMS (APK)</div><code class="ep">/apk/incoming</code></div>
+      <div class="card-body">
+        <div class="fg c2">
+          <div class="fl"><label>Device ID *</label><input id="ai-dev" placeholder="device_1"/></div>
+          <div class="fl"><label>From Number *</label><input id="ai-from" placeholder="+919876543210"/></div>
+          <div class="fl"><label>SIM Slot</label>
+            <select id="ai-sim"><option value="1">SIM 1</option><option value="2">SIM 2</option></select>
+          </div>
+          <div class="fl"><label>SIM 1 Number</label><input id="ai-sim1" placeholder="+91xxx"/></div>
+          <div class="fl full"><label>Message *</label><textarea id="ai-msg" rows="2" placeholder="Received SMS content..."></textarea></div>
+        </div>
+        <button class="btn btn-green" onclick="doApkIncoming()" style="margin-top:8px">▶ Log Incoming</button>
+      </div>
+    </div>
+
+    <!-- ADMIN STATS -->
+    <div id="sec-admin-stats" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge adm">ADMIN</span> Dashboard Stats</div><code class="ep">/admin/stats</code></div>
+      <div class="card-body">
+        <button class="btn btn-primary" onclick="doAdminStats()">▶ Load Stats</button>
+        <div id="stats-boxes" class="stats-grid" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN KEYS -->
+    <div id="sec-admin-keys" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge adm">ADMIN</span> API Keys</div><code class="ep">/admin/keys</code></div>
+      <div class="tabs">
+        <div class="tab on" onclick="tab(this,'kt1')">List Keys</div>
+        <div class="tab" onclick="tab(this,'kt2')">Create Key</div>
+      </div>
+      <div id="kt1" class="tab-pane on">
+        <button class="btn btn-primary" onclick="doListKeys()">▶ List All Keys</button>
+      </div>
+      <div id="kt2" class="tab-pane">
+        <div class="fg c2">
+          <div class="fl"><label>Name *</label><input id="k-name" placeholder="Client Name"/></div>
+          <div class="fl"><label>Email</label><input id="k-email" placeholder="client@example.com"/></div>
+          <div class="fl"><label>Plan</label>
+            <select id="k-plan"><option>free</option><option>basic</option><option>pro</option><option>enterprise</option></select>
+          </div>
+          <div class="fl"><label>SMS Limit</label><input id="k-limit" type="number" value="1000"/></div>
+          <div class="fl"><label>Expires (optional)</label><input id="k-exp" type="date"/></div>
+        </div>
+        <button class="btn btn-green" onclick="doCreateKey()" style="margin-top:8px">▶ Create API Key</button>
+      </div>
+    </div>
+
+    <!-- ADMIN DEVICES -->
+    <div id="sec-admin-devices" class="card" style="display:none">
+      <div class="card-head"><div class="card-title"><span class="badge adm">ADMIN</span> Manage Devices</div></div>
+      <div class="tabs">
+        <div class="tab on" onclick="tab(this,'dt1')">Add Device</div>
+        <div class="tab" onclick="tab(this,'dt2')">Update Device</div>
+      </div>
+      <div id="dt1" class="tab-pane on">
+        <div class="fg c2">
+          <div class="fl"><label>Device ID *</label><input id="d-did" placeholder="device_4"/></div>
+          <div class="fl"><label>Name *</label><input id="d-name" placeholder="Device 4 - Airtel"/></div>
+          <div class="fl"><label>SIM 1 Number</label><input id="d-sim1" placeholder="+91xxxxxxxxxx"/></div>
+          <div class="fl"><label>SIM 2 Number</label><input id="d-sim2" placeholder="+91xxxxxxxxxx"/></div>
+          <div class="fl"><label>Operator 1</label><input id="d-op1" placeholder="Airtel"/></div>
+          <div class="fl"><label>Operator 2</label><input id="d-op2" placeholder="Jio"/></div>
+          <div class="fl"><label>Daily Limit</label><input id="d-dlim" type="number" value="500"/></div>
+        </div>
+        <button class="btn btn-green" onclick="doAddDevice()" style="margin-top:8px">▶ Add Device</button>
+      </div>
+      <div id="dt2" class="tab-pane">
+        <div class="fg c2">
+          <div class="fl"><label>Device ID *</label><input id="u-did" placeholder="device_1"/></div>
+          <div class="fl"><label>Note</label><input id="u-note" placeholder="Device note"/></div>
+          <div class="fl"><label>Daily Limit</label><input id="u-dlim" type="number"/></div>
+          <div class="fl"><label>Status</label>
+            <select id="u-stat"><option value="">— no change —</option><option value="online">online</option><option value="offline">offline</option></select>
+          </div>
+          <div class="fl"><label>SIM1 Blocked</label>
+            <select id="u-s1b"><option value="">— no change —</option><option value="false">false</option><option value="true">true</option></select>
+          </div>
+          <div class="fl"><label>SIM2 Blocked</label>
+            <select id="u-s2b"><option value="">— no change —</option><option value="false">false</option><option value="true">true</option></select>
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="doUpdateDevice()" style="margin-top:8px">▶ Update Device</button>
+      </div>
+    </div>
+
+    <!-- RESPONSE -->
+    <div class="res-card">
+      <div class="res-head">
+        <span style="font-size:13px;font-weight:700">Response</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="res-time" style="font-family:var(--mono);font-size:11px;color:var(--mut)"></span>
+          <span id="res-status" class="res-status" style="display:none"></span>
+        </div>
+      </div>
+      <pre id="res-body">// Response appears here...</pre>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const G = id => document.getElementById(id);
+const V = id => G(id)?.value?.trim();
+
+// Char counter
+G('s-msg')?.addEventListener('input', e => {
+  G('s-chars').textContent = `${e.target.value.length} / 160`;
+});
+
+// Auto-save config to localStorage
+['in-url','in-key','in-admin','in-apk'].forEach(id => {
+  const el = G(id);
+  const saved = localStorage.getItem('axe_'+id);
+  if (saved) el.value = saved;
+  el.addEventListener('change', () => localStorage.setItem('axe_'+id, el.value));
+});
+
+function updateBulkCount() {
+  const n = V('b-nums').split('\n').filter(l=>l.trim()).length;
+  G('b-count').textContent = n + ' numbers';
+}
+
+function show(id) {
+  document.querySelectorAll('.card,[class*="sec-"]').forEach(el => {
+    if (el.id?.startsWith('sec-')) el.style.display = 'none';
+  });
+  const el = G('sec-'+id);
+  if (el) el.style.display = '';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+}
+
+function tab(el, paneId) {
+  el.closest('.card').querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  el.closest('.card').querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  G(paneId).classList.add('on');
+}
+
+// ── API caller ──
+async function call(method, path, body, useAPK=false, useAdmin=false) {
+  const baseUrl = V('in-url').replace(/\/$/, '');
+  const apiKey  = V('in-key');
+  const apkSec  = V('in-apk');
+  const admSec  = V('in-admin');
+
+  G('res-body').innerHTML = '<span class="spin"></span> Calling...';
+  G('res-status').style.display = 'none';
+  G('res-time').textContent = '';
+
+  const t0 = Date.now();
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (useAPK)   headers['x-apk-secret']    = apkSec;
+    else if (useAdmin) headers['x-admin-secret'] = admSec;
+    else          headers['x-api-key']         = apiKey;
+
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+
+    const res  = await fetch(baseUrl + path, opts);
+    const data = await res.json();
+    const ms   = Date.now() - t0;
+
+    showRes(data, res.status, ms);
+
+    // Auto-fill device cards
+    if (data.devices) renderDevices(data.devices);
+    if (data.stats)   renderStats(data.stats);
+
+    return data;
+  } catch(e) {
+    showRes({ error: e.message, hint: 'Check SUPABASE URL and CORS settings' }, 0, Date.now()-t0);
+  }
+}
+
+function showRes(data, status, ms) {
+  const el = G('res-status');
+  el.style.display = 'inline-block';
+  el.textContent = status === 0 ? 'Network Error' : status + (status < 300 ? ' OK' : ' Error');
+  el.className = 'res-status ' + (status >= 200 && status < 300 ? 's-ok' : 's-err');
+  G('res-time').textContent = ms + 'ms';
+  G('res-body').innerHTML = highlight(JSON.stringify(data, null, 2));
+}
+
+function highlight(json) {
+  return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      let c = 'jn';
+      if (/^"/.test(m)) c = /:$/.test(m) ? 'jk' : 'js';
+      else if (/true|false/.test(m)) c = 'jb';
+      else if (/null/.test(m)) c = 'jl';
+      return `<span class="${c}">${m}</span>`;
+    });
+}
+
+function renderDevices(devices) {
+  const box = G('dev-cards');
+  if (!box) return;
+  box.innerHTML = devices.map(d => `
+    <div class="dev-card">
+      <div class="dev-status">
+        <span class="dot ${d.status==='online'?'dot-on':d.status==='busy'?'dot-busy':'dot-off'}"></span>
+        ${d.status}
+      </div>
+      <div style="font-weight:700;margin:6px 0 4px">${d.name}</div>
+      <div style="font-size:11px;color:var(--mut);font-family:var(--mono)">${d.device_id}</div>
+      ${d.sim1?`<div style="font-size:11px;color:var(--mut);margin-top:4px">SIM1: ${d.sim1}</div>`:''}
+      ${d.sim2?`<div style="font-size:11px;color:var(--mut)">SIM2: ${d.sim2}</div>`:''}
+      <div style="font-size:11px;color:var(--mut);margin-top:4px">${d.sms_sent_today??0}/${d.daily_limit} today</div>
+    </div>
+  `).join('');
+}
+
+function renderStats(s) {
+  const box = G('stats-boxes');
+  if (!box) return;
+  const items = [
+    ['Active API Keys', s.active_api_keys, 'var(--acc)'],
+    ['Online Devices', s.online_devices, 'var(--acc2)'],
+    ['Total SMS', s.total_sms, 'var(--txt)'],
+    ['Pending', s.pending_sms, 'var(--yel)'],
+    ['Sent', s.sent_sms, 'var(--acc2)'],
+    ['Incoming', s.incoming_sms, 'var(--acc)'],
+  ];
+  box.innerHTML = items.map(([l,v,c]) => `
+    <div class="stat-box">
+      <div class="stat-val" style="color:${c}">${v??0}</div>
+      <div class="stat-lbl">${l}</div>
+    </div>
+  `).join('');
+}
+
+// ── Actions ──
+async function testConn() {
+  const data = await call('GET', '/health');
+  const pill = G('conn-pill');
+  if (data?.status === 'ok') {
+    pill.textContent = `⬤ Connected — ${data.online_devices} devices online`;
+    pill.className = 'conn-pill ok';
+  } else {
+    pill.textContent = '⬤ Connection failed';
+    pill.className = 'conn-pill err';
+  }
+}
+
+function doSendSingle() {
+  call('POST', '/sms/send', {
+    to:            V('s-to'),
+    message:       V('s-msg'),
+    sim_slot:      parseInt(V('s-sim')||'1'),
+    device_id:     V('s-dev')||undefined,
+    campaign_name: V('s-camp')||undefined,
+  });
+}
+
+function doSendBulk() {
+  const nums = V('b-nums').split('\n').map(n=>n.trim()).filter(Boolean);
+  call('POST', '/sms/bulk', {
+    recipients:    nums,
+    message:       V('b-msg'),
+    campaign_name: V('b-camp')||undefined,
+    device_id:     V('b-dev')||undefined,
+    sim_slot:      V('b-sim')?parseInt(V('b-sim')):undefined,
+  });
+}
+
+function doStatus()    { call('GET', `/sms/status?sms_id=${V('st-id')}`); }
+function doBalance()   { call('GET', '/balance'); }
+function doDevices()   { call('GET', '/devices/list'); }
+function doAdminStats(){ call('GET', '/admin/stats', null, false, true); }
+function doListKeys()  { call('GET', '/admin/keys', null, false, true); }
+
+function doLogs() {
+  const p = new URLSearchParams({ page: V('l-page')||1, limit: V('l-limit')||20 });
+  if (V('l-status'))  p.set('status', V('l-status'));
+  if (V('l-camp'))    p.set('campaign', V('l-camp'));
+  if (V('l-dev'))     p.set('device_id', V('l-dev'));
+  call('GET', `/data/sms/list?${p}`);
+}
+
+function doSearch() {
+  call('GET', `/data/sms/search?q=${encodeURIComponent(V('sch-q'))}&limit=${V('sch-l')}&page=${V('sch-p')}`);
+}
+
+function doIncoming() {
+  const p = new URLSearchParams({ page: V('i-p')||1, limit: V('i-l')||20 });
+  if (V('i-from')) p.set('from', V('i-from'));
+  call('GET', `/incoming?${p}`);
+}
+
+function doHeartbeat() {
+  call('POST', '/apk/heartbeat', {
+    device_id: V('hb-dev'),
+    public_ip: V('hb-ip')||undefined,
+    model:     V('hb-model')||undefined,
+    battery:   V('hb-bat')?parseInt(V('hb-bat')):undefined,
+  }, true);
+}
+
+function doQueue() {
+  call('GET', `/apk/queue?device_id=${V('q-dev')}&limit=${V('q-lim')||20}`, null, true);
+}
+
+function doDelivery() {
+  call('POST', '/apk/delivery', {
+    sms_id:         V('dr-id'),
+    device_id:      V('dr-dev'),
+    status:         V('dr-stat'),
+    apk_message_id: V('dr-apkid')||undefined,
+    sim_slot:       parseInt(V('dr-sim')||'1'),
+    error:          V('dr-err')||undefined,
+  }, true);
+}
+
+function doApkIncoming() {
+  call('POST', '/apk/incoming', {
+    device_id:   V('ai-dev'),
+    from_number: V('ai-from'),
+    message:     V('ai-msg'),
+    sim_slot:    parseInt(V('ai-sim')||'1'),
+    sim1:        V('ai-sim1')||undefined,
+  }, true);
+}
+
+function doCreateKey() {
+  const exp = V('k-exp');
+  call('POST', '/admin/keys', {
+    name:      V('k-name'),
+    email:     V('k-email')||undefined,
+    plan:      V('k-plan'),
+    sms_limit: parseInt(V('k-limit')||'1000'),
+    expires_at:exp ? new Date(exp).toISOString() : undefined,
+  }, false, true);
+}
+
+function doAddDevice() {
+  call('POST', '/admin/devices', {
+    device_id:   V('d-did'),
+    name:        V('d-name'),
+    sim1:        V('d-sim1')||undefined,
+    sim2:        V('d-sim2')||undefined,
+    operator1:   V('d-op1')||undefined,
+    operator2:   V('d-op2')||undefined,
+    daily_limit: parseInt(V('d-dlim')||'500'),
+  }, false, true);
+}
+
+function doUpdateDevice() {
+  const body = {};
+  if (V('u-note'))  body.note        = V('u-note');
+  if (V('u-dlim'))  body.daily_limit = parseInt(V('u-dlim'));
+  if (V('u-stat'))  body.status      = V('u-stat');
+  if (V('u-s1b'))   body.sim1_block  = V('u-s1b') === 'true';
+  if (V('u-s2b'))   body.sim2_block  = V('u-s2b') === 'true';
+  call('PUT', `/admin/devices/${V('u-did')}`, body, false, true);
+}
+
+function copyRes() {
+  navigator.clipboard.writeText(G('res-body').innerText);
+}
+function clearRes() {
+  G('res-body').innerHTML = '// Cleared';
+  G('res-status').style.display = 'none';
+}
+</script>
+</body>
+</html>
